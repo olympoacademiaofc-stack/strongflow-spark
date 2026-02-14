@@ -7,6 +7,7 @@ import {
   MessageSquare,
   CalendarCheck,
   Dumbbell,
+  UserCircle,
   Menu,
   X,
   Crown,
@@ -19,6 +20,7 @@ const navItems = [
   { title: "Timeline", url: "/timeline", icon: MessageSquare },
   { title: "Check-in", url: "/checkin", icon: CalendarCheck },
   { title: "Modalidades", url: "/modalidades", icon: Dumbbell },
+  { title: "Área do Aluno", url: "/area-aluno", icon: UserCircle },
 ];
 
 export function AppSidebar() {

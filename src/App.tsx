@@ -9,6 +9,7 @@ import Alunos from "./pages/Alunos";
 import Timeline from "./pages/Timeline";
 import Checkin from "./pages/Checkin";
 import Modalidades from "./pages/Modalidades";
+import AreaAluno from "./pages/AreaAluno";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/checkin" element={<Checkin />} />
           <Route path="/modalidades" element={<Modalidades />} />
+          <Route path="/area-aluno" element={<AreaAluno />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
