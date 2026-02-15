@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   UserPlus,
@@ -11,7 +11,9 @@ import {
   Menu,
   X,
   Crown,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -27,6 +29,12 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const filteredNavItems = user?.role === "aluno"
+    ? navItems.filter((item) => ["/area-aluno", "/timeline", "/checkin"].includes(item.url))
+    : navItems;
 
   return (
     <>
@@ -85,7 +93,7 @@ export function AppSidebar() {
 
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = location.pathname === item.url;
             return (
               <NavLink
@@ -110,16 +118,23 @@ export function AppSidebar() {
 
         {/* Footer */}
         {!collapsed && (
-          <div className="p-4 border-t border-sidebar-border">
+          <div className="p-4 border-t border-sidebar-border space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full gold-gradient flex items-center justify-center text-xs font-bold text-primary-foreground">
-                A
+                {user?.name?.charAt(0) || "U"}
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-medium text-foreground truncate">Admin</p>
-                <p className="text-xs text-muted-foreground truncate">admin@olimpo.com</p>
+                <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
             </div>
+            <button
+              onClick={() => { logout(); navigate("/login"); }}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive transition-colors w-full"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </button>
           </div>
         )}
       </aside>
