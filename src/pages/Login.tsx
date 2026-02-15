@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Crown, LogIn, Eye, EyeOff } from "lucide-react";
+import { LogIn, Eye, EyeOff } from "lucide-react";
+import logoOlimpo from "@/assets/logo-olimpo.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,11 +37,9 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl gold-gradient mb-4">
-            <Crown className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img src={logoOlimpo} alt="OLIMPO Centro de Treinamento" className="h-24 w-24 mx-auto mb-4 invert" />
           <h1 className="text-4xl font-bold gold-text font-display">OLIMPO</h1>
-          <p className="text-muted-foreground mt-2">Sistema de Gestão de Academia</p>
+          <p className="text-muted-foreground mt-1 text-sm tracking-widest">CENTRO DE TREINAMENTO</p>
         </div>
 
         {/* Form */}
