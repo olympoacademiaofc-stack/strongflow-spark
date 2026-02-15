@@ -13,7 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import logoOlimpo from "@/assets/logo-olimpo.jpg";
+import logoOlimpo from "@/assets/logo-olimpo.png";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -67,7 +67,7 @@ export function AppSidebar() {
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2 overflow-hidden">
-            <img src={logoOlimpo} alt="OLIMPO" className="h-8 w-8 shrink-0 rounded object-contain invert" />
+            <img src={logoOlimpo} alt="OLIMPO" className="h-8 w-8 shrink-0 object-contain gold-logo" />
             {!collapsed && (
               <span className="font-display text-xl font-bold gold-text whitespace-nowrap">
                 OLIMPO

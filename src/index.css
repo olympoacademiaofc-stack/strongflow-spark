@@ -86,6 +86,10 @@
     border-color: hsl(43 75% 49% / 0.3);
   }
 
+  .gold-logo {
+    filter: invert(1) sepia(1) saturate(3) hue-rotate(10deg) brightness(0.9);
+  }
+
   .card-glow {
     box-shadow: 0 0 30px hsl(43 75% 49% / 0.05);
   }
