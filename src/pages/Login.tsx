@@ -37,7 +37,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src={logoOlimpo} alt="OLIMPO Centro de Treinamento" className="h-32 w-auto mx-auto mb-4" />
+          <img src={logoOlimpo} alt="OLIMPO Centro de Treinamento" className="h-32 w-auto mx-auto mb-4 mix-blend-screen" />
           <h1 className="text-4xl font-bold gold-text font-display">OLIMPO</h1>
           <p className="text-muted-foreground mt-1 text-sm tracking-widest">CENTRO DE TREINAMENTO</p>
         </div>

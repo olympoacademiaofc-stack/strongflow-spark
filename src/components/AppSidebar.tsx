@@ -67,7 +67,7 @@ export function AppSidebar() {
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2 overflow-hidden">
-            <img src={logoOlimpo} alt="OLIMPO" className="h-8 w-8 shrink-0 object-contain" />
+            <img src={logoOlimpo} alt="OLIMPO" className="h-8 w-8 shrink-0 object-contain mix-blend-multiply dark:mix-blend-screen" />
             {!collapsed && (
               <span className="font-display text-xl font-bold gold-text whitespace-nowrap">
                 OLIMPO
