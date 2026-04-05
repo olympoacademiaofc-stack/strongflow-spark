@@ -54,33 +54,6 @@ const turmasDisponiveis = [
   { id: 3, nome: "Funcional — Manhã", horario: "08:00 - 09:00", vagas: 20, total: 30 },
 ];
 
-const timelinePosts = [
-  {
-    id: 1,
-    autor: "Academia Olimpo",
-    texto: "🏆 Novo horário de Cross Training disponível! Segundas e Quartas às 19h.",
-    data: "14/02/2026",
-    curtidas: 24,
-    fixado: true,
-  },
-  {
-    id: 2,
-    autor: "Academia Olimpo",
-    texto: "💪 Promoção de Carnaval! Indique um amigo e ganhe 15% de desconto na próxima mensalidade.",
-    data: "12/02/2026",
-    curtidas: 42,
-    fixado: true,
-  },
-  {
-    id: 3,
-    autor: "João Mendes",
-    texto: "Mais um dia de treino pesado! 💪🔥 #OlimpoFit",
-    data: "13/02/2026",
-    curtidas: 8,
-    fixado: false,
-  },
-];
-
 const statusPagamento: Record<string, { label: string; class: string }> = {
   pago: { label: "Pago", class: "bg-success/20 text-success border-success/30" },
   pendente: { label: "Pendente", class: "bg-warning/20 text-warning border-warning/30" },
@@ -145,7 +118,7 @@ const AreaAluno = () => {
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full grid grid-cols-4 bg-card border border-border">
+          <TabsList className="w-full grid grid-cols-3 bg-card border border-border">
             <TabsTrigger value="meu-plano" className="data-[state=active]:gold-gradient data-[state=active]:text-primary-foreground text-xs sm:text-sm">
               <Crown className="h-4 w-4 mr-1 hidden sm:inline" />
               Meu Plano
@@ -157,10 +130,6 @@ const AreaAluno = () => {
             <TabsTrigger value="pagamentos" className="data-[state=active]:gold-gradient data-[state=active]:text-primary-foreground text-xs sm:text-sm">
               <CreditCard className="h-4 w-4 mr-1 hidden sm:inline" />
               Pagamentos
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="data-[state=active]:gold-gradient data-[state=active]:text-primary-foreground text-xs sm:text-sm">
-              <MessageSquare className="h-4 w-4 mr-1 hidden sm:inline" />
-              Timeline
             </TabsTrigger>
           </TabsList>
 
@@ -313,40 +282,6 @@ const AreaAluno = () => {
             </Card>
           </TabsContent>
 
-          {/* Timeline */}
-          <TabsContent value="timeline" className="space-y-4 mt-4">
-            {timelinePosts.map((post) => (
-              <Card key={post.id} className={`bg-card border-border ${post.fixado ? "border-primary/30" : ""}`}>
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full gold-gradient flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
-                      {post.autor.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">{post.autor}</span>
-                        {post.fixado && (
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
-                            Fixado
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">{post.data}</span>
-                      </div>
-                      <p className="text-sm mt-2">{post.texto}</p>
-                      <div className="flex items-center gap-4 mt-3">
-                        <button className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                          ❤️ {post.curtidas}
-                        </button>
-                        <button className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                          💬 Comentar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>

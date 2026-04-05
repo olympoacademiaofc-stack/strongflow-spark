@@ -12,6 +12,8 @@ import Timeline from "./pages/Timeline";
 import Checkin from "./pages/Checkin";
 import Modalidades from "./pages/Modalidades";
 import AreaAluno from "./pages/AreaAluno";
+import Equipe from "./pages/Equipe";
+import AreaProfessor from "./pages/AreaProfessor";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -27,12 +29,20 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            {user?.role === "aluno" ? <Navigate to="/area-aluno" replace /> : <Dashboard />}
+            {user?.role === "aluno" ? (
+              <Navigate to="/area-aluno" replace />
+            ) : user?.role === "professor" ? (
+              <Navigate to="/area-professor" replace />
+            ) : (
+              <Dashboard />
+            )}
           </ProtectedRoute>
         }
       />
       <Route path="/matricula" element={<ProtectedRoute allowedRoles={["admin"]}><Matricula /></ProtectedRoute>} />
       <Route path="/alunos" element={<ProtectedRoute allowedRoles={["admin"]}><Alunos /></ProtectedRoute>} />
+      <Route path="/equipe" element={<ProtectedRoute allowedRoles={["admin"]}><Equipe /></ProtectedRoute>} />
+      <Route path="/area-professor" element={<ProtectedRoute allowedRoles={["professor", "admin"]}><AreaProfessor /></ProtectedRoute>} />
       <Route path="/timeline" element={<ProtectedRoute><Timeline /></ProtectedRoute>} />
       <Route path="/checkin" element={<ProtectedRoute><Checkin /></ProtectedRoute>} />
       <Route path="/modalidades" element={<ProtectedRoute allowedRoles={["admin"]}><Modalidades /></ProtectedRoute>} />

@@ -19,10 +19,12 @@ const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Matrícula", url: "/matricula", icon: UserPlus },
   { title: "Alunos", url: "/alunos", icon: Users },
-  { title: "Timeline", url: "/timeline", icon: MessageSquare },
+  { title: "Equipe", url: "/equipe", icon: UserCircle },
+  { title: "Mural", url: "/timeline", icon: MessageSquare }, // Renamed to Mural
   { title: "Check-in", url: "/checkin", icon: CalendarCheck },
   { title: "Modalidades", url: "/modalidades", icon: Dumbbell },
   { title: "Área do Aluno", url: "/area-aluno", icon: UserCircle },
+  { title: "Área do Professor", url: "/area-professor", icon: LayoutDashboard },
 ];
 
 export function AppSidebar() {
@@ -34,7 +36,10 @@ export function AppSidebar() {
 
   const filteredNavItems = user?.role === "aluno"
     ? navItems.filter((item) => ["/area-aluno", "/timeline", "/checkin"].includes(item.url))
-    : navItems;
+    : user?.role === "professor"
+    ? navItems.filter((item) => ["/area-professor", "/timeline", "/alunos"].includes(item.url))
+    : navItems.filter((item) => !["/area-aluno", "/area-professor", "/checkin"].includes(item.url)); // Admin is Master
+
 
   return (
     <>
@@ -66,12 +71,17 @@ export function AppSidebar() {
       >
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <img src={logoOlimpo} alt="OLIMPO" className="h-8 w-8 shrink-0 object-contain" />
+          <div className="flex items-center gap-3 px-1 py-1">
+            <img src={logoOlimpo} alt="OLYMPO" className="h-8 w-8 shrink-0 object-contain" />
             {!collapsed && (
-              <span className="font-display text-xl font-bold gold-text whitespace-nowrap">
-                OLIMPO
-              </span>
+              <div className="flex flex-col gap-0.5 leading-none">
+                <span className="font-bold text-sm gold-text tracking-widest font-display">
+                  OLYMPO
+                </span>
+                <span className="text-[10px] text-gray-400 font-medium tracking-tighter uppercase">
+                  Centro de Treinamento
+                </span>
+              </div>
             )}
           </div>
           <button
