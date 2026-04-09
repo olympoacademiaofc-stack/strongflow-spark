@@ -45,42 +45,52 @@ const AreaAluno = () => {
 
   const fetchAlunoData = async () => {
     try {
-      const { data: aluno } = await supabase
+      const { data: aluno, error: alunoError } = await supabase
         .from('alunos')
-        .select('*, modalidades(nome), planos(nome)')
+        .select('*')
         .eq('email', user?.email)
         .single();
+      
+      console.log('Aluno error:', alunoError);
       
       if (aluno) {
         setAlunoData(aluno);
         
         const { data: turmas } = await supabase
           .from('turmas')
-          .select('*, modalidade(nome), colaboradores(nome)')
-          .eq('status', 'ativa');
+          .select('*')
+          .limit(20);
         
         setTurmasDisponiveis(turmas || []);
 
-        const { data: inscricoesData } = await supabase
-          .from('inscricoes_turma')
-          .select('*, turmas(*)')
-          .eq('aluno_id', aluno.id)
-          .eq('status', 'ativo');
-        
-        setInscricoes(inscricoesData || []);
-        setMinhasTurmas(inscricoesData?.map(i => i.turmas) || []);
+        try {
+          const { data: inscricoesData } = await supabase
+            .from('inscricoes_turma')
+            .select('*')
+            .eq('aluno_id', aluno.id);
+          
+          setInscricoes(inscricoesData || []);
+        } catch (e) {
+          console.log('Tabela inscricoes não existe ainda');
+        }
 
-        const { data: checkinsData } = await supabase
-          .from('checkins')
-          .select('*, turmas(nome)')
-          .eq('aluno_id', aluno.id)
-          .order('data_checkin', { ascending: false })
-          .limit(10);
-        
-        setCheckins(checkinsData || []);
+        try {
+          const { data: checkinsData } = await supabase
+            .from('checkins')
+            .select('*')
+            .eq('aluno_id', aluno.id)
+            .order('data_checkin', { ascending: false })
+            .limit(10);
+          
+          setCheckins(checkinsData || []);
+        } catch (e) {
+          console.log('Tabela checkins não existe ainda');
+        }
+      } else {
+        console.log('Aluno não encontrado');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Erro fetchAlunoData:', err);
     } finally {
       setLoading(false);
     }
@@ -144,7 +154,7 @@ const AreaAluno = () => {
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-display font-bold">{alunoData.nome}</h1>
             <p className="text-muted-foreground mt-1">
-              {alunoData.modalidades?.nome || "Sem modalidade"} · Plano {alunoData.planos?.nome || "Mensal"}
+              Sem modalidade
             </p>
             <div className="flex flex-wrap gap-2 mt-2 justify-center sm:justify-start">
               <Badge variant="outline" className="bg-success/20 text-success border-success/30">
@@ -166,12 +176,12 @@ const AreaAluno = () => {
           <div className="stat-card text-center">
             <Dumbbell className="h-5 w-5 text-primary mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">Modalidade</p>
-            <p className="font-semibold text-sm">{alunoData.modalidades?.nome || "—"}</p>
+            <p className="font-semibold text-sm">{alunoData.modalidade || "—"}</p>
           </div>
           <div className="stat-card text-center">
             <CreditCard className="h-5 w-5 text-primary mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">Plano</p>
-            <p className="font-semibold text-sm">{alunoData.planos?.nome || "—"}</p>
+            <p className="font-semibold text-sm">{alunoData.plano || "—"}</p>
           </div>
           <div className="stat-card text-center">
             <CalendarCheck className="h-5 w-5 text-success mx-auto mb-2" />
@@ -215,11 +225,11 @@ const AreaAluno = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Modalidade</p>
-                    <p className="font-medium">{alunoData.modalidades?.nome || "—"}</p>
+                    <p className="font-medium">{alunoData.modalidade || "—"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Plano</p>
-                    <p className="font-medium">{alunoData.planos?.nome || "—"}</p>
+                    <p className="font-medium">{alunoData.plano || "—"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Status</p>
