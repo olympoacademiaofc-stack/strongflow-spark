@@ -37,24 +37,37 @@ const AreaAluno = () => {
   const [inscricoes, setInscricoes] = useState<any[]>([]);
 
   useEffect(() => {
+    console.log('AreaAluno: user:', user);
     if (user?.email) {
+      console.log('AreaAluno: fetching data for:', user.email);
       fetchAlunoData();
+    } else {
+      setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchAlunoData = async () => {
+    console.log('fetchAlunoData started');
     try {
+      console.log('Buscando aluno com email:', user?.email);
       const { data: aluno, error: alunoError } = await supabase
         .from('alunos')
         .select('*')
         .eq('email', user?.email)
         .single();
       
-      console.log('Aluno error:', alunoError);
+      console.log('Aluno resultado:', aluno, 'Erro:', alunoError);
+      
+      if (alunoError) {
+        console.error('Erro ao buscar aluno:', alunoError);
+        setLoading(false);
+        return;
+      }
       
       if (aluno) {
         setAlunoData(aluno);
+        console.log('Aluno definido:', aluno);
         
         const { data: turmas } = await supabase
           .from('turmas')
@@ -62,36 +75,16 @@ const AreaAluno = () => {
           .limit(20);
         
         setTurmasDisponiveis(turmas || []);
+        console.log('Turmas definidas:', turmas?.length);
 
-        try {
-          const { data: inscricoesData } = await supabase
-            .from('inscricoes_turma')
-            .select('*')
-            .eq('aluno_id', aluno.id);
-          
-          setInscricoes(inscricoesData || []);
-        } catch (e) {
-          console.log('Tabela inscricoes não existe ainda');
-        }
-
-        try {
-          const { data: checkinsData } = await supabase
-            .from('checkins')
-            .select('*')
-            .eq('aluno_id', aluno.id)
-            .order('data_checkin', { ascending: false })
-            .limit(10);
-          
-          setCheckins(checkinsData || []);
-        } catch (e) {
-          console.log('Tabela checkins não existe ainda');
-        }
+        setLoading(false);
+        console.log('Loading definido para false');
       } else {
-        console.log('Aluno não encontrado');
+        console.log('Aluno não encontrado para email:', user?.email);
+        setLoading(false);
       }
     } catch (err: any) {
       console.error('Erro fetchAlunoData:', err);
-    } finally {
       setLoading(false);
     }
   };
@@ -138,8 +131,29 @@ const AreaAluno = () => {
     }
   };
 
-  if (loading) return <AppLayout><div className="p-8 text-center">Carregando...</div></AppLayout>;
-  if (!alunoData) return <AppLayout><div className="p-8 text-center">Aluno não encontrado</div></AppLayout>;
+  if (loading) {
+    console.log('Rendering: loading state');
+    return (
+      <AppLayout>
+        <div className="p-8 text-center text-white">Carregando dados do aluno...</div>
+      </AppLayout>
+    );
+  }
+  
+  console.log('Rendering: alunoData:', alunoData);
+  
+  if (!alunoData) {
+    console.log('Rendering: no aluno data');
+    return (
+      <AppLayout>
+        <div className="p-8 text-center text-white">
+          <h1 className="text-2xl mb-4">Área do Aluno</h1>
+          <p>Você precisa estar cadastrado como aluno para acessar esta área.</p>
+          <p className="mt-2 text-gray-400">Email: {user?.email}</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const frequenciaPercent = Math.round((checkins.length / 30) * 100);
 
