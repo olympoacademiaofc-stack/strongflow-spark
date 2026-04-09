@@ -36,30 +36,57 @@ const AreaProfessor = () => {
   const [professorId, setProfessorId] = useState<string | null>(null);
   const [alunos, setAlunos] = useState<any[]>([]);
   const [selectedTurma, setSelectedTurma] = useState<any | null>(null);
+  const [modalidades, setModalidades] = useState<any[]>([]);
   const { toast } = useToast();
   
   // Turma Form
   const [nomeTurma, setNomeTurma] = useState("");
   const [horarioTurma, setHorarioTurma] = useState("");
   const [showAddTurma, setShowAddTurma] = useState(false);
+  const [modalidadeId, setModalidadeId] = useState("");
+  const [diaSemana, setDiaSemana] = useState("");
+  const [horaInicio, setHoraInicio] = useState("");
+  const [horaFim, setHoraFim] = useState("");
+  const [vagasTotal, setVagasTotal] = useState(30);
 
   const [alunoSelecionado, setAlunoSelecionado] = useState("");
   const [conteudoAviso, setConteudoAviso] = useState("");
   const [conteudoFeedback, setConteudoFeedback] = useState("");
   const [loadingAção, setLoadingAção] = useState(false);
   const [presencas, setPresencas] = useState<any[]>([]);
+  const [agendas, setAgendas] = useState<any[]>([]);
+
+  // Agenda form
+  const [showAddAgenda, setShowAddAgenda] = useState(false);
+  const [diaSemanaAgenda, setDiaSemanaAgenda] = useState("");
+  const [horaInicioAgenda, setHoraInicioAgenda] = useState("");
+  const [horaFimAgenda, setHoraFimAgenda] = useState("");
+  const [descricaoAgenda, setDescricaoAgenda] = useState("");
+  const [turmaAgenda, setTurmaAgenda] = useState("");
 
   // Edit states for Turmas
   const [editingTurma, setEditingTurma] = useState<any | null>(null);
   const [editNomeTurma, setEditNomeTurma] = useState("");
   const [editHorarioTurma, setEditHorarioTurma] = useState("");
+  const [editHoraInicio, setEditHoraInicio] = useState("");
+  const [editHoraFim, setEditHoraFim] = useState("");
+  const [editVagas, setEditVagas] = useState(30);
+  const [editDiaSemana, setEditDiaSemana] = useState("");
+  const [editModalidadeId, setEditModalidadeId] = useState("");
 
   useEffect(() => {
     if (user?.email) {
       fetchProfessorData();
       fetchAllAlunos();
+      fetchModalidades();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const fetchModalidades = async () => {
+    const { data } = await supabase.from('modalidades').select('id, nome');
+    setModalidades(data || []);
+  };
 
   const fetchPresencasTurma = async (turmaId: string) => {
     const idsAlunos = turmas.find(t => t.id === turmaId)?.turma_alunos?.map((ta: any) => ta.aluno_id) || [];
@@ -90,18 +117,21 @@ const AreaProfessor = () => {
       if (!prof) return;
       setProfessorId(prof.id);
 
-      const { data: turmasData } = await supabase
+      const { data: turmasData, error: turmasError } = await supabase
         .from('turmas')
-        .select(`
-          *,
-          turma_alunos (
-            aluno_id,
-            alunos (id, nome)
-          )
-        `)
+        .select('*')
         .eq('professor_id', prof.id);
-
+      
+      if (turmasError) console.error('Erro turmas:', turmasError);
       setTurmas(turmasData || []);
+
+      const { data: agendasData } = await supabase
+        .from('agendas')
+        .select('*, turmas(nome)')
+        .eq('professor_id', prof.id)
+        .order('dia_semana', { ascending: true });
+
+      setAgendas(agendasData || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -110,32 +140,60 @@ const AreaProfessor = () => {
   };
 
   const handleCreateTurma = async () => {
-    if (!nomeTurma || !horarioTurma || !professorId) return;
+    if (!nomeTurma || !professorId) return;
     const { error } = await supabase.from('turmas').insert([{
       professor_id: professorId,
       nome: nomeTurma,
-      horario: horarioTurma
+      horario: `${horaInicio} - ${horaFim}`
+    }]).select();
+    if (!error) {
+      setNomeTurma(""); setHoraInicio(""); setHoraFim(""); setDiaSemana(""); setModalidadeId(""); setVagasTotal(30);
+      setShowAddTurma(false);
+      fetchProfessorData();
+      toast({ title: "Turma criada!", description: "A turma foi cadastrada com sucesso." });
+    } else {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleCreateAgenda = async () => {
+    if (!diaSemanaAgenda || !horaInicioAgenda || !horaFimAgenda || !professorId) return;
+    const { error } = await supabase.from('agendas').insert([{
+      professor_id: professorId,
+      dia_semana: diaSemanaAgenda,
+      hora_inicio: horaInicioAgenda,
+      hora_fim: horaFimAgenda,
+      descricao: descricaoAgenda,
+      turma_id: turmaAgenda || null
     }]);
     if (!error) {
-      setNomeTurma(""); setHorarioTurma(""); setShowAddTurma(false);
+      toast({ title: "Agenda criada!", description: "Seu horário foi adicionado à agenda." });
+      setDiaSemanaAgenda(""); setHoraInicioAgenda(""); setHoraFimAgenda(""); setDescricaoAgenda(""); setTurmaAgenda("");
+      setShowAddAgenda(false);
       fetchProfessorData();
+    } else {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
   };
 
   const handleUpdateTurma = async () => {
-    if (!editingTurma || !editNomeTurma || !editHorarioTurma) return;
+    if (!editingTurma || !editNomeTurma) return;
     try {
       const { error } = await supabase
         .from('turmas')
         .update({
           nome: editNomeTurma,
-          horario: editHorarioTurma
+          hora_inicio: editHoraInicio,
+          hora_fim: editHoraFim,
+          vagas_total: editVagas,
+          dia_semana: editDiaSemana,
+          modalidade_id: editModalidadeId || null
         })
         .eq('id', editingTurma.id);
 
       if (error) throw error;
 
-      setTurmas(turmas.map(t => t.id === editingTurma.id ? { ...t, nome: editNomeTurma, horario: editHorarioTurma } : t));
+      setTurmas(turmas.map(t => t.id === editingTurma.id ? { ...t, nome: editNomeTurma, hora_inicio: editHoraInicio, hora_fim: editHoraFim, vagas_total: editVagas, dia_semana: editDiaSemana, modalidade_id: editModalidadeId } : t));
       toast({ title: "Turma atualizada", description: "As alterações foram salvas." });
       setEditingTurma(null);
     } catch (err: any) {
@@ -146,7 +204,12 @@ const AreaProfessor = () => {
   const startEditingTurma = (t: any) => {
     setEditingTurma(t);
     setEditNomeTurma(t.nome);
-    setEditHorarioTurma(t.horario);
+    setEditHorarioTurma(t.horario || "");
+    setEditHoraInicio(t.hora_inicio || "");
+    setEditHoraFim(t.hora_fim || "");
+    setEditVagas(t.vagas_total || 30);
+    setEditDiaSemana(t.dia_semana || "");
+    setEditModalidadeId(t.modalidade_id || "");
   };
 
   const handleAddAlunoToTurma = async (alunoId: string, turmaId: string) => {
@@ -299,8 +362,48 @@ const AreaProfessor = () => {
                     <Input id="nomeT" value={nomeTurma} onChange={e => setNomeTurma(e.target.value)} placeholder="Ex: Musculação Avançada A" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="horarioT">Horário</Label>
-                    <Input id="horarioT" value={horarioTurma} onChange={e => setHorarioTurma(e.target.value)} placeholder="Ex: Seg/Qua - 18h" />
+                    <Label htmlFor="modalidadeT">Modalidade</Label>
+                    <select 
+                      id="modalidadeT"
+                      value={modalidadeId}
+                      onChange={e => setModalidadeId(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Selecionar...</option>
+                      {modalidades.map(m => (
+                        <option key={m.id} value={m.id}>{m.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="diaSemanaT">Dia da Semana</Label>
+                    <select 
+                      id="diaSemanaT"
+                      value={diaSemana}
+                      onChange={e => setDiaSemana(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Selecionar...</option>
+                      <option value="segunda">Segunda-feira</option>
+                      <option value="terca">Terça-feira</option>
+                      <option value="quarta">Quarta-feira</option>
+                      <option value="quinta">Quinta-feira</option>
+                      <option value="sexta">Sexta-feira</option>
+                      <option value="sabado">Sábado</option>
+                      <option value="domingo">Domingo</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vagasT">Vagas Totais</Label>
+                    <Input id="vagasT" type="number" value={vagasTotal} onChange={e => setVagasTotal(parseInt(e.target.value) || 30)} placeholder="30" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="horaInicioT">Hora de Início</Label>
+                    <Input id="horaInicioT" type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="horaFimT">Hora de Término</Label>
+                    <Input id="horaFimT" type="time" value={horaFim} onChange={e => setHoraFim(e.target.value)} />
                   </div>
                 </div>
                 <Button onClick={handleCreateTurma} className="w-full gold-gradient">Salvar Turma</Button>
@@ -313,7 +416,9 @@ const AreaProfessor = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-bold text-lg">{turma.nome}</h3>
-                      <p className="text-sm text-muted-foreground">{turma.horario}</p>
+                      <p className="text-sm text-muted-foreground">{turma.modalidade?.nome}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{turma.dia_semana} · {turma.hora_inicio} - {turma.hora_fim}</p>
+                      <p className="text-xs text-primary font-semibold mt-1">Vagas: {turma.vagas_disponiveis}/{turma.vagas_total}</p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => fetchPresencasTurma(turma.id)}>
                       Ver Presenças
@@ -367,24 +472,93 @@ const AreaProfessor = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="agenda">
-             <div className="stat-card p-0 overflow-hidden">
-                <div className="p-4 gold-gradient text-primary-foreground font-bold">Meus Horários de Hoje</div>
-                <div className="divide-y divide-border">
-                   {turmas.map(t => (
-                      <div key={t.id} className="p-4 flex items-center gap-6 hover:bg-secondary/10 transition-colors">
-                         <div className="flex flex-col items-center justify-center p-2 rounded bg-secondary/50 min-w-[80px]">
-                            <Clock className="h-4 w-4 text-primary" />
-                            <span className="text-xs font-bold mt-1 uppercase">{t.horario.split('-')[1]?.trim() || "Aula"}</span>
-                         </div>
-                         <div>
-                            <p className="font-bold">{t.nome}</p>
-                            <p className="text-sm text-muted-foreground">{t.turma_alunos?.length || 0} alunos confirmados</p>
-                         </div>
-                      </div>
-                   ))}
+          <TabsContent value="agenda" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-display font-semibold">Minha Agenda</h2>
+              <Button onClick={() => setShowAddAgenda(!showAddAgenda)} className="gold-gradient text-primary-foreground font-semibold">
+                {showAddAgenda ? "Fechar" : "Criar Agenda"}
+              </Button>
+            </div>
+
+            {showAddAgenda && (
+              <div className="stat-card border-primary/50 animate-slide-up space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="diaSemanaAgenda">Dia da Semana</Label>
+                    <select 
+                      id="diaSemanaAgenda"
+                      value={diaSemanaAgenda}
+                      onChange={e => setDiaSemanaAgenda(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="segunda">Segunda-feira</option>
+                      <option value="terca">Terça-feira</option>
+                      <option value="quarta">Quarta-feira</option>
+                      <option value="quinta">Quinta-feira</option>
+                      <option value="sexta">Sexta-feira</option>
+                      <option value="sabado">Sábado</option>
+                      <option value="domingo">Domingo</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="turmaAgenda">Turma (opcional)</Label>
+                    <select 
+                      id="turmaAgenda"
+                      value={turmaAgenda}
+                      onChange={e => setTurmaAgenda(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Sem turma específica</option>
+                      {turmas.map(t => (
+                        <option key={t.id} value={t.id}>{t.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="horaInicioAgenda">Hora de Início</Label>
+                    <Input id="horaInicioAgenda" type="time" value={horaInicioAgenda} onChange={e => setHoraInicioAgenda(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="horaFimAgenda">Hora de Término</Label>
+                    <Input id="horaFimAgenda" type="time" value={horaFimAgenda} onChange={e => setHoraFimAgenda(e.target.value)} />
+                  </div>
                 </div>
-             </div>
+                <div className="space-y-2">
+                  <Label htmlFor="descricaoAgenda">Descrição</Label>
+                  <Input id="descricaoAgenda" value={descricaoAgenda} onChange={e => setDescricaoAgenda(e.target.value)} placeholder="Ex: Treino de Musculação" />
+                </div>
+                <Button onClick={handleCreateAgenda} className="w-full gold-gradient">Salvar Agenda</Button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {agendas.length === 0 ? (
+                <div className="stat-card col-span-full text-center py-8">
+                  <Calendar className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground">Nenhum horário cadastrado na agenda.</p>
+                  <p className="text-sm text-muted-foreground/70">Clique em "Criar Agenda" para adicionar.</p>
+                </div>
+              ) : (
+                agendas.map(agenda => (
+                  <div key={agenda.id} className="stat-card border-l-4 border-l-primary">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-bold text-lg capitalize">{agenda.dia_semana}</h4>
+                        <p className="text-sm text-muted-foreground">{agenda.turmas?.nome || "Horário geral"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="font-semibold">{agenda.hora_inicio} - {agenda.hora_fim}</span>
+                    </div>
+                    {agenda.descricao && (
+                      <p className="text-sm text-muted-foreground mt-2">{agenda.descricao}</p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="avisos">
@@ -459,13 +633,55 @@ const AreaProfessor = () => {
               <DialogTitle className="font-display">Editar Detalhes da Turma</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-nome-turma">Nome da Turma</Label>
-                <Input id="edit-nome-turma" value={editNomeTurma} onChange={e => setEditNomeTurma(e.target.value)} className="bg-background" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-horario-turma">Horário / Dias</Label>
-                <Input id="edit-horario-turma" value={editHorarioTurma} onChange={e => setEditHorarioTurma(e.target.value)} className="bg-background" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nome-turma">Nome da Turma</Label>
+                  <Input id="edit-nome-turma" value={editNomeTurma} onChange={e => setEditNomeTurma(e.target.value)} className="bg-background" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-modalidade">Modalidade</Label>
+                  <select 
+                    id="edit-modalidade"
+                    value={editModalidadeId}
+                    onChange={e => setEditModalidadeId(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Selecionar...</option>
+                    {modalidades.map(m => (
+                      <option key={m.id} value={m.id}>{m.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dia-semana">Dia da Semana</Label>
+                  <select 
+                    id="edit-dia-semana"
+                    value={editDiaSemana}
+                    onChange={e => setEditDiaSemana(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Selecionar...</option>
+                    <option value="segunda">Segunda-feira</option>
+                    <option value="terca">Terça-feira</option>
+                    <option value="quarta">Quarta-feira</option>
+                    <option value="quinta">Quinta-feira</option>
+                    <option value="sexta">Sexta-feira</option>
+                    <option value="sabado">Sábado</option>
+                    <option value="domingo">Domingo</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-vagas">Vagas Totais</Label>
+                  <Input id="edit-vagas" type="number" value={editVagas} onChange={e => setEditVagas(parseInt(e.target.value) || 30)} className="bg-background" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-hora-inicio">Hora de Início</Label>
+                  <Input id="edit-hora-inicio" type="time" value={editHoraInicio} onChange={e => setEditHoraInicio(e.target.value)} className="bg-background" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-hora-fim">Hora de Término</Label>
+                  <Input id="edit-hora-fim" type="time" value={editHoraFim} onChange={e => setEditHoraFim(e.target.value)} className="bg-background" />
+                </div>
               </div>
               <Button onClick={handleUpdateTurma} className="w-full gold-gradient text-primary-foreground h-11 font-bold mt-2">
                 Salvar Alterações

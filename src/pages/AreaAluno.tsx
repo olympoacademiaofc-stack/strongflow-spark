@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,53 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
-  User,
   CreditCard,
   CalendarCheck,
-  MessageSquare,
   Dumbbell,
   Clock,
   CheckCircle2,
   AlertCircle,
   Crown,
-  ChevronRight,
+  Users,
 } from "lucide-react";
-
-const alunoData = {
-  nome: "Carlos Silva",
-  cpf: "123.456.789-00",
-  whatsapp: "(11) 99999-0001",
-  foto: null,
-  modalidade: "Musculação",
-  plano: "Mensal",
-  status: "ativo" as const,
-  vencimento: "15/03/2026",
-  frequencia: 18,
-  totalDias: 22,
-  dataMatricula: "10/01/2025",
-};
-
-const pagamentos = [
-  { id: 1, mes: "Fev/2026", valor: "R$ 129,90", status: "pago", data: "05/02/2026", metodo: "PIX" },
-  { id: 2, mes: "Jan/2026", valor: "R$ 129,90", status: "pago", data: "03/01/2026", metodo: "Cartão" },
-  { id: 3, mes: "Dez/2025", valor: "R$ 129,90", status: "pago", data: "02/12/2025", metodo: "PIX" },
-  { id: 4, mes: "Nov/2025", valor: "R$ 129,90", status: "atrasado", data: "-", metodo: "-" },
-  { id: 5, mes: "Out/2025", valor: "R$ 129,90", status: "pago", data: "01/10/2025", metodo: "Boleto" },
-];
-
-const checkins = [
-  { id: 1, turma: "Musculação — Manhã", horario: "07:00", data: "14/02/2026", status: "confirmado" },
-  { id: 2, turma: "Musculação — Manhã", horario: "07:00", data: "13/02/2026", status: "confirmado" },
-  { id: 3, turma: "Musculação — Manhã", horario: "07:00", data: "12/02/2026", status: "confirmado" },
-  { id: 4, turma: "Funcional — Tarde", horario: "16:00", data: "11/02/2026", status: "confirmado" },
-  { id: 5, turma: "Musculação — Manhã", horario: "07:00", data: "10/02/2026", status: "falta" },
-];
-
-const turmasDisponiveis = [
-  { id: 1, nome: "Musculação — Manhã", horario: "07:00 - 08:00", vagas: 12, total: 30 },
-  { id: 2, nome: "Musculação — Tarde", horario: "16:00 - 17:00", vagas: 5, total: 30 },
-  { id: 3, nome: "Funcional — Manhã", horario: "08:00 - 09:00", vagas: 20, total: 30 },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/use-toast";
 
 const statusPagamento: Record<string, { label: string; class: string }> = {
   pago: { label: "Pago", class: "bg-success/20 text-success border-success/30" },
@@ -61,8 +26,112 @@ const statusPagamento: Record<string, { label: string; class: string }> = {
 };
 
 const AreaAluno = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [tab, setTab] = useState("meu-plano");
-  const frequenciaPercent = Math.round((alunoData.frequencia / alunoData.totalDias) * 100);
+  const [loading, setLoading] = useState(true);
+  const [alunoData, setAlunoData] = useState<any>(null);
+  const [turmasDisponiveis, setTurmasDisponiveis] = useState<any[]>([]);
+  const [minhasTurmas, setMinhasTurmas] = useState<any[]>([]);
+  const [checkins, setCheckins] = useState<any[]>([]);
+  const [inscricoes, setInscricoes] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchAlunoData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const fetchAlunoData = async () => {
+    try {
+      const { data: aluno } = await supabase
+        .from('alunos')
+        .select('*, modalidades(nome), planos(nome)')
+        .eq('email', user?.email)
+        .single();
+      
+      if (aluno) {
+        setAlunoData(aluno);
+        
+        const { data: turmas } = await supabase
+          .from('turmas')
+          .select('*, modalidade(nome), colaboradores(nome)')
+          .eq('status', 'ativa');
+        
+        setTurmasDisponiveis(turmas || []);
+
+        const { data: inscricoesData } = await supabase
+          .from('inscricoes_turma')
+          .select('*, turmas(*)')
+          .eq('aluno_id', aluno.id)
+          .eq('status', 'ativo');
+        
+        setInscricoes(inscricoesData || []);
+        setMinhasTurmas(inscricoesData?.map(i => i.turmas) || []);
+
+        const { data: checkinsData } = await supabase
+          .from('checkins')
+          .select('*, turmas(nome)')
+          .eq('aluno_id', aluno.id)
+          .order('data_checkin', { ascending: false })
+          .limit(10);
+        
+        setCheckins(checkinsData || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInscrever = async (turmaId: string) => {
+    if (!alunoData) return;
+    const { error } = await supabase.from('inscricoes_turma').insert([{
+      aluno_id: alunoData.id,
+      turma_id: turmaId
+    }]);
+    if (!error) {
+      toast({ title: "Inscrição realizada!", description: "Você foi inscrito na turma com sucesso." });
+      fetchAlunoData();
+    } else {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleCancelarInscricao = async (turmaId: string) => {
+    if (!alunoData) return;
+    const { error } = await supabase
+      .from('inscricoes_turma')
+      .delete()
+      .eq('aluno_id', alunoData.id)
+      .eq('turma_id', turmaId);
+    
+    if (!error) {
+      toast({ title: "Inscrição cancelada", description: "Você foi removido da turma." });
+      fetchAlunoData();
+    }
+  };
+
+  const handleCheckinTurma = async (turmaId: string) => {
+    if (!alunoData) return;
+    const { error } = await supabase.from('checkins').insert([{
+      aluno_id: alunoData.id,
+      turma_id: turmaId
+    }]);
+    if (!error) {
+      toast({ title: "Check-in realizado!", description: "Sua presença foi confirmada." });
+      fetchAlunoData();
+    } else {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  };
+
+  if (loading) return <AppLayout><div className="p-8 text-center">Carregando...</div></AppLayout>;
+  if (!alunoData) return <AppLayout><div className="p-8 text-center">Aluno não encontrado</div></AppLayout>;
+
+  const frequenciaPercent = Math.round((checkins.length / 30) * 100);
 
   return (
     <AppLayout>
@@ -70,25 +139,25 @@ const AreaAluno = () => {
         {/* Header do aluno */}
         <div className="stat-card flex flex-col sm:flex-row items-center gap-6">
           <div className="h-20 w-20 rounded-full gold-gradient flex items-center justify-center text-primary-foreground font-display text-3xl font-bold shrink-0">
-            {alunoData.nome.charAt(0)}
+            {alunoData.nome?.charAt(0)}
           </div>
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-display font-bold">{alunoData.nome}</h1>
             <p className="text-muted-foreground mt-1">
-              {alunoData.modalidade} · Plano {alunoData.plano}
+              {alunoData.modalidades?.nome || "Sem modalidade"} · Plano {alunoData.planos?.nome || "Mensal"}
             </p>
             <div className="flex flex-wrap gap-2 mt-2 justify-center sm:justify-start">
               <Badge variant="outline" className="bg-success/20 text-success border-success/30">
-                Ativo
+                {alunoData.status === 'ativo' ? 'Ativo' : alunoData.status}
               </Badge>
               <Badge variant="outline" className="border-border text-muted-foreground">
-                Desde {alunoData.dataMatricula}
+                Desde {new Date(alunoData.created_at).toLocaleDateString('pt-BR')}
               </Badge>
             </div>
           </div>
           <div className="text-center sm:text-right">
             <p className="text-xs text-muted-foreground">Próximo vencimento</p>
-            <p className="text-lg font-semibold gold-text">{alunoData.vencimento}</p>
+            <p className="text-lg font-semibold gold-text">{alunoData.vencimento || "—"}</p>
           </div>
         </div>
 
@@ -97,22 +166,22 @@ const AreaAluno = () => {
           <div className="stat-card text-center">
             <Dumbbell className="h-5 w-5 text-primary mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">Modalidade</p>
-            <p className="font-semibold text-sm">{alunoData.modalidade}</p>
+            <p className="font-semibold text-sm">{alunoData.modalidades?.nome || "—"}</p>
           </div>
           <div className="stat-card text-center">
             <CreditCard className="h-5 w-5 text-primary mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">Plano</p>
-            <p className="font-semibold text-sm">{alunoData.plano}</p>
+            <p className="font-semibold text-sm">{alunoData.planos?.nome || "—"}</p>
           </div>
           <div className="stat-card text-center">
             <CalendarCheck className="h-5 w-5 text-success mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">Frequência</p>
-            <p className="font-semibold text-sm">{alunoData.frequencia}/{alunoData.totalDias} dias</p>
+            <p className="font-semibold text-sm">{checkins.length}/30 dias</p>
           </div>
           <div className="stat-card text-center">
             <Clock className="h-5 w-5 text-warning mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">Vencimento</p>
-            <p className="font-semibold text-sm">{alunoData.vencimento}</p>
+            <p className="font-semibold text-sm">{alunoData.vencimento || "—"}</p>
           </div>
         </div>
 
@@ -146,21 +215,47 @@ const AreaAluno = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Modalidade</p>
-                    <p className="font-medium">{alunoData.modalidade}</p>
+                    <p className="font-medium">{alunoData.modalidades?.nome || "—"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Plano</p>
-                    <p className="font-medium">{alunoData.plano}</p>
+                    <p className="font-medium">{alunoData.planos?.nome || "—"}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Valor</p>
-                    <p className="font-medium gold-text">R$ 129,90/mês</p>
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <p className="font-medium">{alunoData.status === 'ativo' ? 'Ativo' : alunoData.status}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Próximo Vencimento</p>
-                    <p className="font-medium">{alunoData.vencimento}</p>
+                    <p className="font-medium">{alunoData.vencimento || "—"}</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Minhas Turmas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {minhasTurmas.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Você não está inscrito em nenhuma turma.</p>
+                ) : (
+                  minhasTurmas.map((turma: any) => (
+                    <div key={turma.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                      <div>
+                        <p className="font-medium">{turma.nome}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{turma.dia_semana} · {turma.hora_inicio} - {turma.hora_fim}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => handleCheckinTurma(turma.id)}>
+                        Check-in
+                      </Button>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -178,7 +273,7 @@ const AreaAluno = () => {
                 </div>
                 <Progress value={frequenciaPercent} className="h-3" />
                 <p className="text-xs text-muted-foreground">
-                  Você compareceu {alunoData.frequencia} de {alunoData.totalDias} dias úteis este mês.
+                  Você compareceu {checkins.length} dias este mês.
                 </p>
               </CardContent>
             </Card>
@@ -188,28 +283,36 @@ const AreaAluno = () => {
           <TabsContent value="checkin" className="space-y-4 mt-4">
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-lg">Fazer Check-in</CardTitle>
+                <CardTitle className="text-lg">Minhas Turmas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {turmasDisponiveis.map((turma) => (
-                  <div
-                    key={turma.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/30 transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium">{turma.nome}</p>
-                      <p className="text-sm text-muted-foreground">{turma.horario}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">
-                        {turma.vagas}/{turma.total} vagas
-                      </span>
-                      <Button size="sm" className="gold-gradient text-primary-foreground">
-                        Check-in
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                {minhasTurmas.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Você não está inscrito em nenhuma turma.</p>
+                ) : (
+                  minhasTurmas.map((turma: any) => {
+                    const jaFeitoCheckin = checkins.some(c => c.turma_id === turma.id && new Date(c.data_checkin).toDateString() === new Date().toDateString());
+                    return (
+                      <div
+                        key={turma.id}
+                        className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/30 transition-colors"
+                      >
+                        <div>
+                          <p className="font-medium">{turma.nome}</p>
+                          <p className="text-sm text-muted-foreground capitalize">{turma.dia_semana} · {turma.hora_inicio} - {turma.hora_fim}</p>
+                          <p className="text-xs text-primary mt-1">{turma.modalidade?.nome}</p>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          className={jaFeitoCheckin ? "bg-success/20 text-success border border-success/30" : "gold-gradient text-primary-foreground"}
+                          onClick={() => handleCheckinTurma(turma.id)}
+                          disabled={jaFeitoCheckin}
+                        >
+                          {jaFeitoCheckin ? "Check-in Feito" : "Fazer Check-in"}
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
               </CardContent>
             </Card>
 
@@ -218,31 +321,24 @@ const AreaAluno = () => {
                 <CardTitle className="text-lg">Histórico de Presença</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {checkins.map((ci) => (
-                  <div key={ci.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-                    <div className="flex items-center gap-3">
-                      {ci.status === "confirmado" ? (
+                {checkins.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Nenhum check-in realizado ainda.</p>
+                ) : (
+                  checkins.map((ci) => (
+                    <div key={ci.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+                      <div className="flex items-center gap-3">
                         <CheckCircle2 className="h-5 w-5 text-success" />
-                      ) : (
-                        <AlertCircle className="h-5 w-5 text-danger" />
-                      )}
-                      <div>
-                        <p className="text-sm font-medium">{ci.turma}</p>
-                        <p className="text-xs text-muted-foreground">{ci.data} · {ci.horario}</p>
+                        <div>
+                          <p className="text-sm font-medium">{ci.turmas?.nome}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(ci.data_checkin).toLocaleDateString('pt-BR')} · {new Date(ci.data_checkin).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
                       </div>
+                      <Badge variant="outline" className="bg-success/20 text-success border-success/30">
+                        Presente
+                      </Badge>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        ci.status === "confirmado"
-                          ? "bg-success/20 text-success border-success/30"
-                          : "bg-danger/20 text-danger border-danger/30"
-                      }
-                    >
-                      {ci.status === "confirmado" ? "Presente" : "Falta"}
-                    </Badge>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
           </TabsContent>
