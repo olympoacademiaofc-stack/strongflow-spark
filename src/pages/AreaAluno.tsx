@@ -19,12 +19,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 
-const statusPagamento: Record<string, { label: string; class: string }> = {
-  pago: { label: "Pago", class: "bg-success/20 text-success border-success/30" },
-  pendente: { label: "Pendente", class: "bg-warning/20 text-warning border-warning/30" },
-  atrasado: { label: "Atrasado", class: "bg-danger/20 text-danger border-danger/30" },
-};
-
 const AreaAluno = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -377,27 +371,9 @@ const AreaAluno = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {pagamentos.map((pag) => (
-                    <div
-                      key={pag.id}
-                      className="flex items-center justify-between py-3 border-b border-border last:border-0"
-                    >
-                      <div>
-                        <p className="font-medium text-sm">{pag.mes}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {pag.data !== "-" ? `Pago em ${pag.data} · ${pag.metodo}` : "Aguardando pagamento"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold text-sm">{pag.valor}</span>
-                        <Badge variant="outline" className={statusPagamento[pag.status].class}>
-                          {statusPagamento[pag.status].label}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-muted-foreground text-sm">
+                  Em breve: integração com sistema de pagamentos.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
